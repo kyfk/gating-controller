@@ -1,0 +1,16 @@
+domain: toolkit.fluxcd.io
+layout:
+- go.kubebuilder.io/v3
+projectName: gate-controller
+repo: github.com/fluxcd/gating-controller
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: toolkit.fluxcd.io
+  group: gating
+  kind: Gate
+  path: github.com/fluxcd/gating-controller/api/v1alpha1
+  version: v1alpha1
+version: "3"

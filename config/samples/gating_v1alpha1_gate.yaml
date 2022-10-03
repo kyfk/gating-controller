@@ -1,0 +1,12 @@
+apiVersion: gating.toolkit.fluxcd.io/v1alpha1
+kind: Gate
+metadata:
+  labels:
+    app.kubernetes.io/name: gate
+    app.kubernetes.io/instance: gate-sample
+    app.kubernetes.io/part-of: gate-controller
+    app.kuberentes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: gate-controller
+  name: gate-sample
+spec:
+  # TODO(user): Add fields here
