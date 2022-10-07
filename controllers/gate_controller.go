@@ -20,9 +20,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/fluxcd/pkg/apis/meta"
 	"github.com/fluxcd/pkg/runtime/conditions"
+	"github.com/fluxcd/pkg/runtime/patch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -55,34 +58,83 @@ const (
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
-func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// log := ctrl.LoggerFrom(ctx)
+func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
+	log := ctrl.LoggerFrom(ctx)
 
-	var gate *gatingv1alpha1.Gate
-	err := r.Get(ctx, req.NamespacedName, gate)
+	var gate gatingv1alpha1.Gate
+	err := r.Get(ctx, req.NamespacedName, &gate)
 	if err != nil {
+		log.Error(err, "failed to retrieve resource")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Initialise the patch helper
+	patchHelper, err := patch.NewHelper(&gate, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Always attempt to patch the object and status after each reconciliation
+	defer func() {
+		// Patch the object, ignoring conflicts on the conditions owned by this controller
+		patchOpts := []patch.Option{
+			patch.WithOwnedConditions{
+				Conditions: []string{
+					meta.ReadyCondition,
+					meta.ReconcilingCondition,
+					meta.StalledCondition,
+					v1alpha1.OpenedCondition,
+				},
+			},
+		}
+
+		// On a clean exit, determine if the resource is still being reconciled, or if it has stalled, and record this observation
+		if retErr == nil && (result.IsZero() || result.RequeueAfter == time.Duration(0)) {
+			// We have now observed this generation
+			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
+
+			readyCondition := conditions.Get(&gate, meta.ReadyCondition)
+			switch {
+			case readyCondition.Status == metav1.ConditionTrue:
+				// As we are no longer reconciling and the end-state is ready, the reconciliation is no longer stalled or progressing, so clear these
+				conditions.Delete(&gate, meta.StalledCondition)
+				conditions.Delete(&gate, meta.ReconcilingCondition)
+			case conditions.IsReconciling(&gate):
+				// This implies stalling is not set; nothing to do
+				break
+			case readyCondition.Status == metav1.ConditionFalse:
+				// As we are no longer reconciling and the end-state is not ready, the reconciliation has stalled
+				conditions.MarkTrue(&gate, meta.StalledCondition, readyCondition.Reason, readyCondition.Message)
+			}
+		}
+
+		// Finally, patch the resource
+		if err := patchHelper.Patch(ctx, &gate, patchOpts...); err != nil {
+			retErr = kerrors.NewAggregate([]error{retErr, err})
+		}
+	}()
+
 	// Set a condition if the Gate is just created, conditions is nil.
 	if len(gate.Status.Conditions) == 0 {
-		condition := r.defaultOpenedCondition(gate)
-		conditions.Set(gate, condition)
+		r.patchStatus(&gate, "", "", r.defaultOpenedCondition(&gate), conditions.TrueCondition(meta.ReadyCondition, v1alpha1.ReconciliationSucceededReason, "Gate is ready"))
 		return ctrl.Result{RequeueAfter: gate.GetRequeueAfter()}, nil
 	}
 
 	// Patch the status when a user has overridden the annotation.
-	requestedAt, resetToDefaultAt, condition, ok, err := r.newStatusFromAnnotating(gate)
+	requestedAt, resetToDefaultAt, openedCondition, ok, err := r.newStatusFromAnnotating(&gate)
 	if err != nil {
+		log.Error(err, "failed to construct new status")
 		return ctrl.Result{}, err
 	}
 	if ok {
-		r.patchStatus(gate, requestedAt, resetToDefaultAt, condition)
+		r.patchStatus(&gate, requestedAt, resetToDefaultAt, openedCondition, conditions.TrueCondition(meta.ReadyCondition, v1alpha1.ReconciliationSucceededReason, "Gate is ready"))
+
 		return ctrl.Result{RequeueAfter: gate.GetRequeueAfter()}, nil
 	}
 
-	err = r.tryResetToDefault(gate)
+	err = r.tryResetToDefault(&gate)
 	if err != nil {
+		log.Error(err, "failed to reset to default status")
 		return ctrl.Result{}, err
 	}
 
@@ -152,15 +204,16 @@ func (r *GateReconciler) tryResetToDefault(gate *v1alpha1.Gate) error {
 		return nil
 	}
 
-	// out of the window.
-	r.patchStatus(gate, "", "", r.defaultOpenedCondition(gate))
+	// the current time is out of the window.
+	r.patchStatus(gate, "", "", r.defaultOpenedCondition(gate), conditions.TrueCondition(meta.ReadyCondition, v1alpha1.ReconciliationSucceededReason, "Gate is ready"))
 	return nil
 }
 
-func (r *GateReconciler) patchStatus(gate *v1alpha1.Gate, requestedAt, resetToDefaultAt string, condition *metav1.Condition) {
+func (r *GateReconciler) patchStatus(gate *v1alpha1.Gate, requestedAt, resetToDefaultAt string, openedCondition, readyCondition *metav1.Condition) {
 	gate.Status.RequestedAt = requestedAt
 	gate.Status.ResetToDefaultAt = resetToDefaultAt
-	conditions.Set(gate, condition)
+	conditions.Set(gate, openedCondition)
+	conditions.Set(gate, readyCondition)
 }
 
 // SetupWithManager sets up the controller with the Manager.

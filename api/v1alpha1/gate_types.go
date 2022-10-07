@@ -67,7 +67,7 @@ type GateStatus struct {
 	// ResetToDefaultAt specifies to reset the status of the gate ahead of its schedule.
 	// +kubebuilder:validation:Format=date-time
 	// +optional
-	ResetToDefaultAt string `json:"ResetToDefaultAt,omitempty"`
+	ResetToDefaultAt string `json:"resetToDefaultAt,omitempty"`
 
 	// Conditions holds the conditions for the GitRepository.
 	// +optional
