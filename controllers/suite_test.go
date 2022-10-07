@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	gatingv1alpha1 "github.com/fluxcd/gating-controller/api/v1alpha1"
+	gatingv1alpha1 "github.com/kyfk/gating-controller/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 

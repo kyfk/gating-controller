@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	gatingv1alpha1 "github.com/fluxcd/gating-controller/api/v1alpha1"
-	"github.com/fluxcd/gating-controller/controllers"
+	gatingv1alpha1 "github.com/kyfk/gating-controller/api/v1alpha1"
+	"github.com/kyfk/gating-controller/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

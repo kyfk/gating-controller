@@ -26,9 +26,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/fluxcd/gating-controller/api/v1alpha1"
-	gatingv1alpha1 "github.com/fluxcd/gating-controller/api/v1alpha1"
-	"github.com/fluxcd/gating-controller/internal/object"
+	"github.com/kyfk/gating-controller/api/v1alpha1"
+	gatingv1alpha1 "github.com/kyfk/gating-controller/api/v1alpha1"
+	"github.com/kyfk/gating-controller/internal/object"
 )
 
 // GateReconciler reconciles a Gate object

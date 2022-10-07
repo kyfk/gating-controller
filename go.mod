@@ -1,4 +1,4 @@
-module github.com/fluxcd/gating-controller
+module github.com/kyfk/gating-controller
 
 go 1.19
 
