@@ -92,7 +92,7 @@ func (r *GateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 func (r *GateReconciler) defaultOpenedCondition(gate *v1alpha1.Gate) *metav1.Condition {
 	switch gate.Spec.Default {
 	case v1alpha1.SpecDefaultOpened:
-		return conditions.TrueCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate scheduled for opening at %s")
+		return conditions.TrueCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate scheduled for opening at %s", time.Now().Format(time.RFC3339))
 	case v1alpha1.SpecDefaultClosed:
 		return conditions.FalseCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate closed by default")
 	default:

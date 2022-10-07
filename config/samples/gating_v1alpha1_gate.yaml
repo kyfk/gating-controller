@@ -9,4 +9,6 @@ metadata:
     app.kubernetes.io/created-by: gate-controller
   name: gate-sample
 spec:
-  # TODO(user): Add fields here
+  interval: 30s
+  default: closed
+  window: 1h
