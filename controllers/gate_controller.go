@@ -169,14 +169,15 @@ func (r *GateReconciler) newStatusFromAnnotating(gate *v1alpha1.Gate) (string, s
 	if annotations[OpenRequestedAnnotation] != "" {
 		requestedAtStr = annotations[OpenRequestedAnnotation]
 		condition = conditions.TrueCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate scheduled for closing at %s", requestedAtStr)
-	} else if annotations[CloseRequestedAnnotation] != "" {
-		requestedAtStr = annotations[CloseRequestedAnnotation]
-		condition = conditions.FalseCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate close requested")
 
-		window, err := time.ParseDuration(gate.Spec.Window)
+		var err error
+		window, err = time.ParseDuration(gate.Spec.Window)
 		if err != nil {
 			return "", "", nil, false, err
 		}
+	} else if annotations[CloseRequestedAnnotation] != "" {
+		requestedAtStr = annotations[CloseRequestedAnnotation]
+		condition = conditions.FalseCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate close requested")
 	} else {
 		return "", "", nil, false, nil
 	}
