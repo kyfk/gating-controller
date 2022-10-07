@@ -156,29 +156,32 @@ func (r *GateReconciler) newStatusFromAnnotating(gate *v1alpha1.Gate) (string, s
 
 	// Reset the all annotations.
 	defer func() {
-		annotations[OpenRequestedAnnotation] = ""
-		annotations[CloseRequestedAnnotation] = ""
+		delete(annotations, OpenRequestedAnnotation)
+		delete(annotations, CloseRequestedAnnotation)
 		gate.SetAnnotations(annotations)
 	}()
 
-	var requestedAtStr string
-	var condition *metav1.Condition
+	var (
+		requestedAtStr string
+		condition      *metav1.Condition
+		window         time.Duration
+	)
 	if annotations[OpenRequestedAnnotation] != "" {
 		requestedAtStr = annotations[OpenRequestedAnnotation]
 		condition = conditions.TrueCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate scheduled for closing at %s", requestedAtStr)
 	} else if annotations[CloseRequestedAnnotation] != "" {
 		requestedAtStr = annotations[CloseRequestedAnnotation]
 		condition = conditions.FalseCondition(v1alpha1.OpenedCondition, v1alpha1.ReconciliationSucceededReason, "Gate close requested")
+
+		window, err := time.ParseDuration(gate.Spec.Window)
+		if err != nil {
+			return "", "", nil, false, err
+		}
 	} else {
 		return "", "", nil, false, nil
 	}
 
 	requestedAt, err := time.Parse(time.RFC3339, requestedAtStr)
-	if err != nil {
-		return "", "", nil, false, err
-	}
-
-	window, err := time.ParseDuration(gate.Spec.Window)
 	if err != nil {
 		return "", "", nil, false, err
 	}

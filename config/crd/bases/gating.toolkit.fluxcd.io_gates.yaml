@@ -71,11 +71,6 @@ spec:
           status:
             description: GateStatus defines the observed state of Gate
             properties:
-              ResetToDefaultAt:
-                description: ResetToDefaultAt specifies to reset the status of the
-                  gate ahead of its schedule.
-                format: date-time
-                type: string
               conditions:
                 description: Conditions holds the conditions for the GitRepository.
                 items:
@@ -148,6 +143,11 @@ spec:
               requestedAt:
                 description: RequestedAt specifies to close or open the gate ahead
                   of its schedule.
+                format: date-time
+                type: string
+              resetToDefaultAt:
+                description: ResetToDefaultAt specifies to reset the status of the
+                  gate ahead of its schedule.
                 format: date-time
                 type: string
             type: object
