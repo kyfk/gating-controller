@@ -31,7 +31,6 @@ import (
 
 	"github.com/kyfk/gating-controller/api/v1alpha1"
 	gatingv1alpha1 "github.com/kyfk/gating-controller/api/v1alpha1"
-	"github.com/kyfk/gating-controller/internal/object"
 )
 
 // GateReconciler reconciles a Gate object
@@ -179,12 +178,12 @@ func (r *GateReconciler) newStatusFromAnnotating(gate *v1alpha1.Gate) (string, s
 		return "", "", nil, false, err
 	}
 
-	interval, err := object.GetRequeueInterval(gate)
+	window, err := time.ParseDuration(gate.Spec.Window)
 	if err != nil {
 		return "", "", nil, false, err
 	}
 
-	resetToDefaultAt := requestedAt.Add(interval)
+	resetToDefaultAt := requestedAt.Add(window)
 
 	return requestedAtStr, resetToDefaultAt.Format(time.RFC3339), condition, true, nil
 }
